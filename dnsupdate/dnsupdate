@@ -1,0 +1,86 @@
+#!/bin/sh
+
+# author: Hung-te Liang (lhd@cs.nctu.edu.tw)
+# target: DNS update
+# create: 2004/02/22
+# update: 2006/07/16
+# update: 2012/11/01
+
+# $1 action
+# $2 Host
+# $3 Domain
+# $4 Type
+# $5 Data
+
+if [ $# -ne 5 ]
+  then 
+    echo "Usage: `basename $0` {add|del|mod} hostname domain type data"
+    exit 1
+fi
+
+
+DNSSERVER="xxx.xx"
+ZONE1="xx1.oo.cc"
+KEY1="xx1.key"
+ZONE2="xx2.oo.cc"
+KEY2="xx2.key"
+
+TTL=600
+
+CONFIG=/usr/local/etc/dnsupdate.conf
+test -f $CONFIG && . ${CONFIG}
+
+ZONE="$3"
+
+case "x${ZONE}" in
+    "x${ZONE1}")
+	KEY=$KEY1
+	;;
+
+    "x${ZONE2}")
+	KEY=$KEY2
+	;;
+
+    *)
+	exit 1
+	;;
+esac
+
+FQDN="${2}.${ZONE}"
+
+
+case "$1" in
+    add)
+	TMPFILE=`mktemp` || exit 1
+	echo "server ${DNSSERVER}" > $TMPFILE
+	echo "prereq nxdomain ${FQDN}" >> $TMPFILE
+	echo "update add ${FQDN} $TTL $4 $5" >> $TMPFILE
+	echo "send" >> $TMPFILE
+	nsupdate -k ${KEY} -v $TMPFILE && rm -f $TMPFILE || exit 1
+	;;
+
+    del)
+	TMPFILE=`mktemp` || exit 1
+	echo "server ${DNSSERVER}" > $TMPFILE
+	echo "update delete ${FQDN}" >> $TMPFILE
+	echo "send" >> $TMPFILE
+	nsupdate -k ${KEY} -v $TMPFILE && rm -f $TMPFILE || exit 1
+	;;
+
+    mod)
+	TMPFILE=`mktemp` || exit 1
+	echo "server ${DNSSERVER}" > $TMPFILE
+	echo "prereq yxdomain ${FQDN}" >> $TMPFILE
+	echo "update delete ${FQDN}" >> $TMPFILE
+	echo "update add ${FQDN} $TTL $4 $5" >> $TMPFILE
+	echo "send" >> $TMPFILE
+	nsupdate -k ${KEY} -v $TMPFILE && rm -f $TMPFILE || exit 1
+	;;
+
+    *)
+	echo "Usage: $0 {add|del|mod} hostname domain type data"
+	exit 1
+	;;
+esac
+
+exit 0
