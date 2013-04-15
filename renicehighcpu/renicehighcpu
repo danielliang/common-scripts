@@ -1,0 +1,34 @@
+#!/bin/sh
+
+#############################################
+#
+# Creator: LHD.20120221
+#
+# Goal: running on the login-nodes to renice & taskset high-CPU-usage processes of users
+#
+############################################
+
+_PS=`which ps`
+_AWK=`which awk`
+_MAIL=`which mail`
+HOSTNAME=`\`which hostname\` -s`
+
+LOGFILE=/tmp/${HOSTNAME}highproc.log
+
+# clean log
+> $LOGFILE
+
+# if %CPU > 10 , 0 =< NICE < 19, TIME >= 3 minutes, normal users
+# Why NICE >=0? for for the normal user's process allowed high priority by root
+ 
+# GNU ps with BSD style. If on FreeBSD, use "axo" instead of "axho" and cut off the first line in awk with "if (NR>1)"
+$_PS axho pid,user,pcpu,time,nice,args | \
+  $_AWK '{num=split($4, a, ":"); \
+  if ($2!="root" && $2!="daemon" && $2!="loadl" && $2!="bin" && $2!="nobody" && $5<19 && $5>=0 && $3>10 && a[2]>=3) print}' \
+  > $LOGFILE
+
+if [ -s $LOGFILE ]; then
+	$_MAIL -s "${HOSTNAME} High-CPU-usage processes of normal users" root < $LOGFILE
+	$_AWK '{print $1}' $LOGFILE | xargs renice 20
+	$_AWK '{print $1}' $LOGFILE | xargs -n 1 taskset -pc 3
+fi
