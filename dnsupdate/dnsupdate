@@ -5,6 +5,7 @@
 # create: 2004/02/22
 # update: 2006/07/16
 # update: 2012/11/01
+# update: 2013/04/11
 
 # $1 action
 # $2 Host
@@ -42,12 +43,12 @@ case "x${ZONE}" in
 	;;
 
     *)
+	echo "Domain $3 is N/A!"
 	exit 1
 	;;
 esac
 
 FQDN="${2}.${ZONE}"
-
 
 case "$1" in
     add)
